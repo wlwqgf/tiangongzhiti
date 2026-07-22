@@ -47,7 +47,8 @@ def fill_submission(case_key):
     st.session_state["doc_text"] = text
     st.session_state["rev_level"] = demo.CASES[case_key]["level"]
     st.session_state["rev_filled_case"] = case_key
-    st.session_state.pop("demo_review", None)
+    # 选择案例后离线自动生成诊断报告（零 Key 可跑，无需点击按钮）
+    st.session_state["demo_review"] = demo.build_review_report(text, demo.CASES[case_key]["level"])
 
 
 tab1, tab2 = st.tabs(["🔍 申报书研判诊断", "📐 等级指标对照"])
@@ -92,10 +93,14 @@ with tab1:
             with st.spinner("⏳ 正在执行六步预审（信息抽取→合规检查→一致性校验→证据评估→标记→诊断）..."):
                 report = call_llm(system_prompt, doc_text, temperature=0.2, max_tokens=8000)
         else:
-            st.caption("⚙️ 未配置模型接口，已用离线规则引擎执行六步预审（零 Key 可跑）；如需 AI 深度诊断请在 `.env` 配置 OPENAI_API_KEY。")
+            st.caption("⚙️ 未配置模型接口，已用离线规则引擎执行六步预审（零 Key 可跑）；如需 AI 深度诊断请在配置 OPENAI_API_KEY。")
             report = demo.build_review_report(doc_text, rev_level)
+        st.session_state["demo_review"] = report
+
+    # 选择案例或点击诊断后，自动展示报告（离线零 Key 也能出报告）
+    if st.session_state.get("demo_review"):
         st.subheader("📋 智能工厂申报书诊断报告")
-        st.markdown(report)
+        st.markdown(st.session_state["demo_review"])
         st.caption("本诊断为 AI 预审，不替代官方评审；复杂问题请转接协会线下专家。")
 
 with tab2:

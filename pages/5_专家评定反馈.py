@@ -421,6 +421,20 @@ SAMPLES = {
     },
 }
 
+def _load_and_run(label, info):
+    """载入案例并离线跑通三模块（初筛→增强→评分），结果存入 session_state（零 Key 可跑）。"""
+    text = open(info["path"], encoding="utf-8").read()
+    st.session_state["doc_text"] = text
+    st.session_state["target_level"] = info["lv"]
+    st.session_state["screen_res"] = screening(text, info["lv"])
+    sk = enhancement_skeleton(text, info["lv"])
+    st.session_state["enh_sk"] = sk
+    st.session_state["enh_llm"] = None
+    for d in E.EXPERT_SCORING_DIMS:
+        st.session_state[f"score_{d['name']}"] = info["scores"][d["name"]]
+    st.success(f"已载入并跑通三模块：{label}")
+
+
 with st.sidebar:
     render_expert_sidebar()
     use_llm = st.checkbox("调用大模型生成完整报告（需配置接口）", value=False,
@@ -428,35 +442,17 @@ with st.sidebar:
     if use_llm and not is_configured():
         st.warning("尚未配置模型接口，勾选后将自动降级为离线引擎。")
     st.divider()
-    st.markdown("### 📋 选择案例（自动填入）")
-    st.caption("点击案例后，申报书全文与等级自动填入；再点下方各模块运行按钮即可（离线·零 Key）。")
+    st.markdown("### 📋 选择案例（自动出报告）")
+    st.caption("点击案例即离线跑通初筛→增强→评分三模块，无需配置接口；也可勾选上方调用大模型。")
     for label, info in SAMPLES.items():
         if st.button(f"📋 {label}", key=f"fill_{label}"):
-            text = open(info["path"], encoding="utf-8").read()
-            st.session_state["doc_text"] = text
-            st.session_state["target_level"] = info["lv"]
-            st.session_state.pop("screen_res", None)
-            st.session_state.pop("enh_sk", None)
-            st.session_state.pop("enh_llm", None)
-            st.session_state.pop("expert_report", None)
-            for d in E.EXPERT_SCORING_DIMS:
-                st.session_state.pop(f"score_{d['name']}", None)
-            st.success(f"已载入：{label}，请点各模块运行按钮")
+            _load_and_run(label, info)
     st.divider()
     st.markdown("### 🚀 一键演示（离线跑通三模块）")
-    st.caption("自动载入样例并连续初筛→增强→评分，无需配置接口。")
+    st.caption("同上：自动载入样例并连续初筛→增强→评分，无需配置接口。")
     for label, info in SAMPLES.items():
         if st.button(f"🚀 {label}", key=f"demo_{label}"):
-            text = open(info["path"], encoding="utf-8").read()
-            st.session_state["doc_text"] = text
-            st.session_state["target_level"] = info["lv"]
-            st.session_state["screen_res"] = screening(text, info["lv"])
-            sk = enhancement_skeleton(text, info["lv"])
-            st.session_state["enh_sk"] = sk
-            st.session_state["enh_llm"] = None
-            for d in E.EXPERT_SCORING_DIMS:
-                st.session_state[f"score_{d['name']}"] = info["scores"][d["name"]]
-            st.success(f"已载入并跑通三模块：{label}")
+            _load_and_run(label, info)
 
 st.markdown(
     "将企业《智能工厂申报书》粘贴到下方，系统按专家端整合包 V3.3 三大模块依次辅助评审。"
