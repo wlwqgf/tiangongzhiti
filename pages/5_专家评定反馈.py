@@ -447,12 +447,6 @@ with st.sidebar:
     for label, info in SAMPLES.items():
         if st.button(f"📋 {label}", key=f"fill_{label}"):
             _load_and_run(label, info)
-    st.divider()
-    st.markdown("### 🚀 一键演示（离线跑通三模块）")
-    st.caption("同上：自动载入样例并连续初筛→增强→评分，无需配置接口。")
-    for label, info in SAMPLES.items():
-        if st.button(f"🚀 {label}", key=f"demo_{label}"):
-            _load_and_run(label, info)
 
 st.markdown(
     "将企业《智能工厂申报书》粘贴到下方，系统按专家端整合包 V3.3 三大模块依次辅助评审。"
