@@ -422,7 +422,8 @@ SAMPLES = {
 }
 
 def _load_and_run(label, info):
-    """载入案例并离线跑通三模块（初筛→增强→评分），结果存入 session_state（零 Key 可跑）。"""
+    """载入案例并离线跑通三模块（初筛→��强→评分），结果存入 session_state（零 Key 可跑）。
+    注意：仅预计算并缓存数据，不自动展示——用户需分别点击各模块的「运行」按钮才会渲染结果。"""
     text = open(info["path"], encoding="utf-8").read()
     st.session_state["doc_text"] = text
     st.session_state["target_level"] = info["lv"]
@@ -432,7 +433,10 @@ def _load_and_run(label, info):
     st.session_state["enh_llm"] = None
     for d in E.EXPERT_SCORING_DIMS:
         st.session_state[f"score_{d['name']}"] = info["scores"][d["name"]]
-    st.success(f"已载入并跑通三模块：{label}")
+    # 清除旧展示标志，让用户重新逐一点击
+    for key in ("show_screening", "show_enhancement", "show_scoring"):
+        st.session_state.pop(key, None)
+    st.success(f"已载入案例「{label}」并完成后台计算，请分别点击下方各模块的运行按钮查看结果。")
 
 
 with st.sidebar:
@@ -476,11 +480,13 @@ with tab1:
                                                f"目标等级：{target_level}\n\n申报书全文：\n{doc_text}",
                                                temperature=0.2, max_tokens=3000)
             st.session_state["screen_res"] = res
-    res = st.session_state.get("screen_res")
-    if res and res.get("target_level") == target_level:
-        render_screening(res)
-    elif res:
-        st.caption("（上次初筛结果的目标等级与当前不一致，请重新运行）")
+            st.session_state["show_screening"] = True
+    if st.session_state.get("show_screening"):
+        res = st.session_state.get("screen_res")
+        if res and res.get("target_level") == target_level:
+            render_screening(res)
+        elif res:
+            st.caption("（上次初筛结果的目标等级与当前不一致，请重新运行）")
 
 # ---------- ② 内容增强标注 ----------
 with tab2:
@@ -495,9 +501,11 @@ with tab2:
                                     temperature=0.3, max_tokens=6000)
             st.session_state["enh_sk"] = sk
             st.session_state["enh_llm"] = llm_text
-    sk = st.session_state.get("enh_sk")
-    if sk:
-        render_enhancement(sk, st.session_state.get("enh_llm"), target_level, len(doc_text))
+            st.session_state["show_enhancement"] = True
+    if st.session_state.get("show_enhancement"):
+        sk = st.session_state.get("enh_sk")
+        if sk:
+            render_enhancement(sk, st.session_state.get("enh_llm"), target_level, len(doc_text))
 
 # ---------- ③ 评分辅助与建议 ----------
 with tab3:
@@ -532,15 +540,17 @@ with tab3:
         st.session_state["expert_report"] = report
         if llm_text:
             st.session_state["expert_report_llm"] = llm_text
+        st.session_state["show_scoring"] = True
 
-    report = st.session_state.get("expert_report")
-    if report:
-        st.subheader("📋 申报书修改建议报告")
-        st.markdown(report)
-        if st.session_state.get("expert_report_llm"):
-            st.markdown("---")
-            st.subheader("🤖 LLM 生成《修改建议报告》全文")
-            st.markdown(st.session_state["expert_report_llm"])
+    if st.session_state.get("show_scoring"):
+        report = st.session_state.get("expert_report")
+        if report:
+            st.subheader("📋 申报书修改建议报告")
+            st.markdown(report)
+            if st.session_state.get("expert_report_llm"):
+                st.markdown("---")
+                st.subheader("🤖 LLM 生成《修改建议报告》全文")
+                st.markdown(st.session_state["expert_report_llm"])
 
 st.divider()
 st.info(DISCLAIMER)
