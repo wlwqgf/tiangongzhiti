@@ -58,7 +58,7 @@ html, body, .stApp{
 /* ---- 标题：青色发光 + 渐变下划线（不透明填充，避免 emoji 变透明） ---- */
 h1{
   color:#7fe9ff;
-  font-size:1.6rem !important; font-weight:700; letter-spacing:.4px;
+  font-size:1.4rem !important; font-weight:700; letter-spacing:.4px;
   text-shadow:0 0 14px rgba(34,211,238,0.4);
   border-bottom:2px solid transparent;
   border-image:linear-gradient(90deg, var(--cyan), transparent) 1;
@@ -66,19 +66,19 @@ h1{
 }
 h2{
   color:#7fe9ff;
-  font-size:1.3rem !important; font-weight:700; letter-spacing:.3px;
+  font-size:1.2rem !important; font-weight:700; letter-spacing:.3px;
   text-shadow:0 0 12px rgba(34,211,238,0.35);
   border-bottom:2px solid transparent;
   border-image:linear-gradient(90deg, var(--cyan), transparent) 1;
   padding-bottom:.2rem;
 }
-h3{ color:var(--cyan); font-size:1.1rem !important; font-weight:600; text-shadow:0 0 10px rgba(34,211,238,0.22); }
+h3{ color:var(--cyan); font-size:1.08rem !important; font-weight:600; text-shadow:0 0 10px rgba(34,211,238,0.22); }
 h4{ color:var(--cyan); font-size:1rem !important; font-weight:600; }
-/* 正文与列表统一放大到 15px，行高更宽松，提升可读性 */
-.stMarkdown p, .stMarkdown li{ color:var(--txt); font-size:0.94rem; line-height:1.65; }
-.stMarkdown p{ font-size:0.96rem; }
+/* 正文与列表放大，缩小与标题的差距，行高更宽松，提升可读性 */
+.stMarkdown p, .stMarkdown li{ color:var(--txt); font-size:1.02rem; line-height:1.72; }
+.stMarkdown p{ font-size:1.05rem; }
 /* caption 微调 */
-.stCaption, .stMarkdown .stCaption{ font-size:0.82rem !important; }
+.stCaption, .stMarkdown .stCaption{ font-size:0.85rem !important; }
 
 /* ---- 侧边栏 ---- */
 section[data-testid="stSidebar"]{
@@ -98,7 +98,7 @@ section[data-testid="stSidebar"] > [data-testid="stSidebarNav"]{ display:none !i
   color:var(--txt) !important;
   border:1px solid var(--border);
   border-radius:11px; padding:.5rem 1rem;
-  font-weight:600; letter-spacing:.3px;
+  font-weight:600; letter-spacing:.3px; font-size:1.02rem;
   box-shadow:var(--glow); transition:all .18s ease;
 }
 .stButton > button:hover{
@@ -189,6 +189,7 @@ table td{ color:var(--txt) !important; border-color:rgba(80,170,255,0.15) !impor
   border-radius:16px; padding:18px 14px; min-height:118px;
   color:var(--txt) !important; backdrop-filter:blur(6px);
   box-shadow:var(--glow); transition:all .2s ease;
+  font-size:1rem;
 }
 [data-testid="stPageLink"] a:hover{
   border-color:var(--cyan); color:#fff !important;
@@ -196,6 +197,11 @@ table td{ color:var(--txt) !important; border-color:rgba(80,170,255,0.15) !impor
   transform:translateY(-3px);
 }
 [data-testid="stPageLink"] a p{ color:var(--txt) !important; font-weight:700; }
+/* 放大各处 emoji 图标（首页卡片 + 侧边栏导航），文字尺寸保持不变 */
+[data-testid="stPageLink"] a > div > span:first-child,
+[data-testid="stPageLink"] a > span:first-child{
+  font-size:1.7rem !important; line-height:1; vertical-align:middle;
+}
 
 /* 分隔线发光 */
 hr{ border:none; height:1px;
