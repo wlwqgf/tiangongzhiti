@@ -1,0 +1,33 @@
+# ===== Python =====
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.venv/
+venv/
+env/
+.python-version
+
+# ===== 环境与密钥（绝不入库）=====
+.env
+.env.*
+!.env.example
+
+# ===== Streamlit 密钥 =====
+.streamlit/secrets.toml
+
+# ===== 系统 / 编辑器 =====
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ===== 日志 =====
+*.log
+
+# ===== 临时测试脚本 =====
+e2e*.py
+/tmp/

@@ -1,0 +1,16 @@
+# 天工智梯 · Streamlit 全局配置
+# 暗色科技主题 + 隐藏报错堆栈（防止源代码路径泄露到页面）
+
+[theme]
+base = "dark"
+primaryColor = "#22d3ee"
+backgroundColor = "#060a1c"
+secondaryBackgroundColor = "#0d1a40"
+textColor = "#e7f0ff"
+font = "sans serif"
+
+[client]
+showErrorDetails = false
+
+[browser]
+gatherUsageStats = false
