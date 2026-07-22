@@ -1,7 +1,7 @@
 """
 模块⑤ 专家侧评定与反馈 —— 天工智梯「专家端智能体」整合包（V3.3）忠实落地
 
-本模块以用户提供的专家端整合包真实内容为唯一蓝本（见 /workspace/天工智梯/expert_pack/）：
+本模块以用户提供的专家端整合包真实内容为唯一蓝本（见 expert_pack/ 目录）：
   · 01_系统提示词_SystemPrompt.md
   · 02_能力契约_Capabilities.md（三大模块 Prompt + 输出格式）
   · 03_知识库_KnowledgeBase.md
@@ -399,22 +399,23 @@ def render_scoring_report(dims_scores: dict, target_level: str, expert_name: str
 # UI
 # ============================================================
 # ---- 样例数据（来自 04_样例数据，含一键演示预设评分）----
+_SAMPLE_ROOT = os.path.join(_ROOT, "expert_pack")
 SAMPLES = {
     "华锐重工（先进级·应通过）": {
         "lv": "先进级",
-        "path": "/workspace/天工智梯/expert_pack/1784556664650137524-sample1_先进级_华锐重工.txt",
+        "path": os.path.join(_SAMPLE_ROOT, "1784556664650137524-sample1_先进级_华锐重工.txt"),
         "scores": {"智能制造成熟度": 18, "信息基础建设水平": 26, "技术应用先进性": 17,
                    "解决方案示范性和可推广性": 8, "经济社会效益情况": 8, "后续实施计划": 7},
     },
     "新兴机械（先进级·应拦截）": {
         "lv": "先进级",
-        "path": "/workspace/天工智梯/expert_pack/1784556664710279767-sample2_不合格_新兴机械.txt",
+        "path": os.path.join(_SAMPLE_ROOT, "1784556664710279767-sample2_不合格_新兴机械.txt"),
         "scores": {"智能制造成熟度": 2, "信息基础建设水平": 8, "技术应用先进性": 3,
                    "解决方案示范性和可推广性": 2, "经济社会效益情况": 5, "后续实施计划": 8},
     },
     "精密电子（基础级·应通过）": {
         "lv": "基础级",
-        "path": "/workspace/天工智梯/expert_pack/1784556664798354131-sample3_基础级_精密电子.txt",
+        "path": os.path.join(_SAMPLE_ROOT, "17845566647983541-sample3_基础级_精密电子.txt"),
         "scores": {"智能制造成熟度": 10, "信息基础建设水平": 22, "技术应用先进性": 14,
                    "解决方案示范性和可推广性": 7, "经济社会效益情况": 8, "后续实施计划": 9},
     },

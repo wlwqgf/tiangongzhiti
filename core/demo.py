@@ -10,11 +10,13 @@ core/demo.py — 天工智梯「全系统案例演示」离线数据 + 生成器
 - ④ 申报书研判：build_review_report(submission, level) -> 六步预审 + 🔴🟡🔵 三级标记
 （⑤ 专家评定已由 pages/5 离线引擎覆盖，本模块复用其案例数据）
 """
+import os
 import re
 from core.knowledge import LEVEL_THRESHOLDS
 from core import e_prompts as E
 
-EXPERT_PACK = "/workspace/天工智梯/expert_pack"
+_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+EXPERT_PACK = os.path.join(_ROOT, "expert_pack")
 
 # ============================================================
 # 一、三个案例工厂的脱敏演示数据
