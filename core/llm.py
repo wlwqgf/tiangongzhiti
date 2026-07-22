@@ -24,9 +24,21 @@ except Exception:  # pragma: no cover
     OpenAI = None  # 未安装 openai 时给出友好提示
 
 
+def _secret(key: str, default=None):
+    """读取密钥：优先环境变量（本地 .env / Streamlit Cloud 注入），其次 st.secrets。"""
+    v = os.getenv(key)
+    if v:
+        return v
+    try:
+        import streamlit as st
+        return st.secrets.get(key, default)
+    except Exception:
+        return default
+
+
 def is_configured() -> bool:
     """是否已正确配置可用的模型接口。"""
-    return bool(os.getenv("OPENAI_API_KEY")) and OpenAI is not None
+    return bool(_secret("OPENAI_API_KEY")) and OpenAI is not None
 
 
 def get_client():
@@ -36,8 +48,8 @@ def get_client():
             "未检测到 openai 库，请执行 `pip install openai`。"
         )
     return OpenAI(
-        api_key=os.getenv("OPENAI_API_KEY"),
-        base_url=os.getenv("OPENAI_BASE_URL"),
+        api_key=_secret("OPENAI_API_KEY"),
+        base_url=_secret("OPENAI_BASE_URL"),
     )
 
 
@@ -63,7 +75,7 @@ def call_llm(
     try:
         client = get_client()
         resp = client.chat.completions.create(
-            model=os.getenv("MODEL_NAME", "glm-4.5-air"),
+            model=_secret("MODEL_NAME", "glm-4.5-air"),
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_content},
