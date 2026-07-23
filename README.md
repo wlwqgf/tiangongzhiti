@@ -108,3 +108,46 @@ bash run.sh
 - Python 3.10+
 - 可访问的 OpenAI 兼容大模型接口（模块②③④⑤需联网调用；模块②可离线）
 - 浏览器（Streamlit 自动打开）
+
+---
+
+## 七、参与贡献（给接手 / 协作者）
+
+本仓库已托管在 GitHub，**公开可读**：
+
+- 仓库地址：`https://github.com/wlwqgf/tiangongzhiti`
+
+### 方式一：直接克隆（推荐，便于提交改动）
+
+```bash
+git clone https://github.com/wlwqgf/tiangongzhiti.git
+cd tiangongzhiti
+pip install -r requirements.txt
+cp .env.example .env        # 可选：填入模型接口（OPENAI_API_KEY / OPENAI_BASE_URL / MODEL_NAME）
+bash run.sh                 # 浏览器自动打开 http://localhost:8501
+```
+
+### 方式二：下载源码压缩包
+
+不会用 Git 也没关系：在 GitHub 仓库页点 **Code → Download ZIP**，即可拿到**不含虚拟环境**的纯源码包（约几百 KB），解压后 `pip install -r requirements.txt && bash run.sh` 即可运行。
+
+### 提交改动流程
+
+1. 在 GitHub 上 **Fork** 本仓库，或联系维护者加入协作者；
+2. 本地新建分支：`git checkout -b feature/你的改动`；
+3. 改完后先验证语法：`python -m py_compile app.py core/*.py pages/*.py`；
+4. 提交并推送到你的分支，发起 **Pull Request**。
+
+### 必须遵守的工程约定（红线）
+
+完整版见 **`HANDOFF.md`**（接手文档），核心要点：
+
+- **零 Key 离线可跑**：未配置模型接口时各模块必须能跑（离线规则引擎兜底）；新增功能须同时提供"大模型版"和"离线版"两条路径。
+- **选案例前全空 / 点生成才出报告 / 点击才显示内容**：报告只在点击按钮后出现，不能一进页面就显示。
+- **防代码泄露**：保留 `.streamlit/config.toml` 的 `showErrorDetails=false`，页面禁止 `st.json()` 暴露内部字段名。
+- **双端分流**（企业端 ①~④ / 专家端 ⑤）与**隐藏原生侧边栏导航**不能破坏。
+- 标题不得用 `background-clip:text` 透明填充（会让 emoji 图标消失）。
+
+### 部署
+
+详见 **`DEPLOY.md`**（Streamlit Community Cloud 免费托管指南：建仓 → 推送 → share.streamlit.io 新建 App → Secrets 配置）。
