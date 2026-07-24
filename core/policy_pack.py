@@ -3,17 +3,25 @@
 core/policy_pack.py —— 政策包推荐引擎（改动2，强化F3）
 
 横向拉通「智能工厂梯度培育 / 专精特新 / 数字化车间 / 工业设计中心 / 单项冠军 /
-新型技改 / 高企 / 科技型中小 / 研发加计 / 先进制造业增值税 / 超长期国债」等政策，
+新型技改 / 高企 / 科技型中小 / 研发加计 / 先进制造业增值税 / 超长期国债 / 首台套 /
+东北振兴金融工具 / 东北区域省级奖补（辽·吉·黑）」等政策，
 并内置「最优不冲突申请组合求解器」：
 
   · 互斥组取高：同一组内只取最高一档（梯度培育四档、专精特初三档、工业设计中心三级）
   · 叠加上限：大连市奖补以最新申报指南封顶为准（默认不封顶，规则透明可查）
-  · 最优选择：给定企业画像 → 算出"拿满且不冲突"的最大金额组合
-  · 透明输出：列出已选 / 因互斥未重复享受 / 待补政策（首台套·东北振兴金融工具）/ 升级建议
+  · 最优选择：给定企业画像 + 申报省份 → 算出"拿满且不冲突"的最大金额组合
+  · 透明输出：列出已选 / 因互斥未重复享受 / 待补政策 / 升级建议
+  · 区域感知：通过 profile["region"] 选择"辽宁（含大连）/ 黑龙江 / 吉林"，
+    仅展示所选省份可叠加的省级奖补；标注"全国/东北"的国家级政策始终参与
 
-资金口径来源：ima 共享知识库「智能工厂政策」→《（最新版）惠企政策30条20260225》（大连）
-  标注 [真实] 的为惠企30条明确值；标注 [待补] 为国家级政策（首台套 / 东北振兴金融工具）
-  等30条未含、待接入数据，不计入总额、单独列示；标注 [暂无] 为政策明文"暂无补助"。
+资金口径来源：
+  · 大连市《惠企政策30条（20260225）》→ 标注 [真实·大连]
+  · 《数字辽宁智造强省专项资金（智造强省方向）管理办法》(辽财经规〔2024〕7号)
+  · 财政部等《关于优化实施设备更新贷款财政贴息政策的通知》(财金〔2026〕2号)
+  · 《黑龙江省推动工业振兴若干政策措施》(黑政办规〔2022〕8号)
+  · 《黑龙江省加快推动制造业和中小企业数字化网络化智能化发展若干政策措施》(2023.12)
+  · 《吉林省知识产权质押融资补助实施细则》
+  · 标注 [真实·东北] 为东北区域省级政策明文值；[暂无] 为政策明文暂无补助
 
 离线规则引擎兜底（无需 API Key）；配置大模型后可生成更自然的申报建议叙述。
 """
@@ -27,23 +35,23 @@ except Exception:  # 离线/独立验证时兜底，不影响仓库内运行
 
 
 def _gradient_amt(p):
-    # 国家级（卓越级及以上）/优秀场景 ≤200万[真实]；省级（先进级）≤100万[真实]
+    # 国家级（卓越级及以上）/优秀场景 ≤200万[真实·大连]；省级（先进级）≤100万[真实·大连]
     # 基础级、领航级 30条未给明确市级奖补 → [暂无]
     return {"基础级": None, "先进级": 100, "卓越级": 200, "领航级": None}.get(p.get("level"))
 
 
 def _zjtx_amt(p):
-    # 小巨人 50万[真实]、省级专精特新 30万[真实]；创新型中小企业无定额奖励[暂无]
+    # 小巨人 50万[真实·大连]、省级专精特新 30万[真实·大连]；创新型中小企业无定额奖励[暂无]
     return {"创新型中小企业": 0, "专精特新中小企业": 30, "专精特新小巨人": 50}.get(p.get("cert"))
 
 
 def _idc_amt(p):
-    # 国家 50万[真实] / 省级 30万[真实] / 市级无[真实]
+    # 国家 50万[真实·大连] / 省级 30万[真实·大连] / 市级无[真实]
     return {"市级": 0, "省级": 30, "国家级": 50}.get(p.get("idc"))
 
 
 def _tech_amt(p):
-    # 大连市制造业新型技术改造专项：设备更新10% / 新型技改20%，单项目最高200万[真实]
+    # 大连市制造业新型技术改造专项：设备更新10% / 新型技改20%，单项目最高200万[真实·大连]
     t = p.get("tech_type")
     inv = p.get("tech_invest") or 0
     if t == "设备更新":
@@ -54,7 +62,7 @@ def _tech_amt(p):
 
 
 def _hightech_amt(p):
-    # 高企研发投入阶梯奖励[真实]：50万→5万；100万→10万；1000万→20万
+    # 高企研发投入阶梯奖励[真实·全国]：50万→5万；100万→10万；1000万→20万
     rnd = p.get("rnd_invest") or 0
     if rnd >= 1000:
         return 20
@@ -66,112 +74,193 @@ def _hightech_amt(p):
 
 
 def _vat_amt(p):
-    # 先进制造业企业增值税加计抵减：当期可抵扣进项税 5%[真实]
+    # 先进制造业企业增值税加计抵减：当期可抵扣进项税 5%[真实·全国]
     if p.get("is_hightech") and (p.get("vat_base") or 0) > 0:
         return (p.get("vat_base") or 0) * 0.05
     return 0
 
 
 def _bond_amt(p):
-    # 超长期特别国债—工业设备更新和技术改造：固定资产投入 15%[真实]
+    # 超长期特别国债—工业设备更新和技术改造：固定资产投入 15%[真实·全国]
     inv = p.get("fixed_asset_invest") or 0
     return inv * 0.15 if inv > 0 else 0
 
 
+# —— 东北区域省级奖补测算函数 ——
+def _hl_digi_factory_amt(p):
+    # 黑龙江：经省级认定的智能工厂，按项目合同金额10%一次性补助，最高1000万[真实·东北]
+    inv = p.get("hl_digi_invest") or 0
+    return min(inv * 0.10, 1000) if inv > 0 else None
+
+
+def _hl_digi_ws_amt(p):
+    # 黑龙江：经省级认定的数字化车间（生产线），按合同金额10%一次性补助，最高200万[真实·东北]
+    inv = p.get("hl_digi_invest") or 0
+    return min(inv * 0.10, 200) if inv > 0 else None
+
+
+def _jl_pledge_amt(p):
+    # 吉林：知识产权质押融资金额贴息2%，每户年度最高20万[真实·东北]
+    amt = p.get("pledge_amount") or 0
+    return min(amt * 0.02, 20) if amt > 0 else None
+
+
+def _first_set_amt(p):
+    # 首台(套)重大技术装备：
+    #  · 黑龙江按产品实际成交价50%奖励，单台≤200万、每户年合计≤500万[真实·东北]
+    #  · 辽宁按《首台套保险费补贴办法》补贴保费；黑龙江对"综合险"按投保费率(≤3%)的80%补偿(≤500万/年)
+    price = p.get("first_set_price") or 0
+    if price > 0:
+        return min(price * 0.50, 200)
+    return None  # 需填成交价方可测算奖励额
+
+
+def _revival_amt(p):
+    # 东北振兴金融工具（设备更新贷款贴息）：
+    #  · 中央财政贴息 1.5个百分点、贴息≤2年（财金〔2026〕2号）[真实·东北]
+    #  · 辽宁贷款贴息≤同期LPR、单项上限1000万；黑龙江技改贴息按LPR给12/24个月、最高800/2500万
+    loan = p.get("loan_amount") or 0
+    return round(loan * 0.015, 1) if loan > 0 else None  # 按国家1.5%年度贴息口径测算
+
+
 # ---------------------------------------------------------------------------
-# 政策库：每条含 硬性条件判定 + 资金测算 + 互斥组 + 数据状态
-#   amount:  callable(profile) -> 数值(万) 或 None(暂无/待补)
+# 政策库：每条含 硬性条件判定 + 资金测算 + 互斥组 + 数据状态 + 适用区域
+#   amount:  callable(profile) -> 数值(万) 或 None(暂无/待补/需补字段)
 #   group:   互斥组标识（同组取高）；None 表示可独立叠加
 #   status:  "active" 已接入真实值 | "pending" 待补数据 | "none" 政策明文暂无补助
+#   region:  适用区域；"全国"/"东北"始终参与，其余按 profile["region"] 过滤
 # ---------------------------------------------------------------------------
 POLICIES = [
-    # —— 梯度培育（互斥组：四档取一）——
+    # —— 梯度培育（互斥组：四档取一）· 辽宁（含大连）——
     {"key": "grad_basic", "name": "智能工厂梯度培育·基础级", "level": "国家级/省级", "group": "梯度培育",
-     "eligible": lambda p: p.get("level") == "基础级", "amount": _gradient_amt, "status": "none",
+     "region": "辽宁（含大连）","eligible": lambda p: p.get("level") == "基础级", "amount": _gradient_amt, "status": "none",
      "basis": "基础级暂无明确市级奖补，以国家/省级最新通知为准", "note": "[暂无]"},
     {"key": "grad_adv", "name": "智能工厂梯度培育·先进级", "level": "省级", "group": "梯度培育",
-     "eligible": lambda p: p.get("level") == "先进级", "amount": _gradient_amt, "status": "active",
-     "basis": "省级（先进级）≤100万（首次认定，一次性）", "note": "[真实]"},
+     "region": "辽宁（含大连）","eligible": lambda p: p.get("level") == "先进级", "amount": _gradient_amt, "status": "active",
+     "basis": "省级（先进级）≤100万（首次认定，一次性）", "note": "[真实·大连]"},
     {"key": "grad_exc", "name": "智能工厂梯度培育·卓越级", "level": "国家级", "group": "梯度培育",
-     "eligible": lambda p: p.get("level") == "卓越级", "amount": _gradient_amt, "status": "active",
-     "basis": "国家级（卓越级及以上）/优秀场景 ≤200万", "note": "[真实]"},
+     "region": "辽宁（含大连）","eligible": lambda p: p.get("level") == "卓越级", "amount": _gradient_amt, "status": "active",
+     "basis": "国家级（卓越级及以上）/优秀场景 ≤200万", "note": "[真实·大连]"},
     {"key": "grad_lead", "name": "智能工厂梯度培育·领航级", "level": "国家级", "group": "梯度培育",
-     "eligible": lambda p: p.get("level") == "领航级", "amount": _gradient_amt, "status": "none",
+     "region": "辽宁（含大连）","eligible": lambda p: p.get("level") == "领航级", "amount": _gradient_amt, "status": "none",
      "basis": "领航级暂无明确市级奖补，以国家/省级最新通知为准", "note": "[暂无]"},
 
-    # —— 专精特新（互斥组：三档取高）——
+    # —— 专精特新（互斥组：三档取高）· 辽宁（含大连）——
     {"key": "zjtx_innov", "name": "专精特新·创新型中小企业", "level": "省级", "group": "专精特新",
-     "eligible": lambda p: p.get("cert") == "创新型中小企业", "amount": _zjtx_amt, "status": "none",
+     "region": "辽宁（含大连）","eligible": lambda p: p.get("cert") == "创新型中小企业", "amount": _zjtx_amt, "status": "none",
      "basis": "创新型中小企业无直接定额奖励（培育阶段）", "note": "[暂无]"},
     {"key": "zjtx_prov", "name": "专精特新·省级专精特新", "level": "省级", "group": "专精特新",
-     "eligible": lambda p: p.get("cert") == "专精特新中小企业", "amount": _zjtx_amt, "status": "active",
-     "basis": "省级专精特新中小企业 30万（首次认定，一次性）", "note": "[真实]"},
+     "region": "辽宁（含大连）","eligible": lambda p: p.get("cert") == "专精特新中小企业", "amount": _zjtx_amt, "status": "active",
+     "basis": "省级专精特新中小企业 30万（首次认定，一次性）", "note": "[真实·大连]"},
     {"key": "zjtx_giant", "name": "专精特新·小巨人", "level": "国家级", "group": "专精特新",
-     "eligible": lambda p: p.get("cert") == "专精特新小巨人", "amount": _zjtx_amt, "status": "active",
-     "basis": "国家级专精特新小巨人 50万；另享上一年度贷款担保费一定比例贴息[真实·贴息比例待补]", "note": "[真实]"},
+     "region": "辽宁（含大连）","eligible": lambda p: p.get("cert") == "专精特新小巨人", "amount": _zjtx_amt, "status": "active",
+     "basis": "国家级专精特新小巨人 50万（大连市级，一次性）", "note": "[真实·大连]"},
 
-    # —— 数字化车间（独立，可与梯度叠加）——
+    # —— 数字化车间（独立，可与梯度叠加）· 辽宁（含大连）——
     {"key": "digital_ws", "name": "辽宁省数字化车间", "level": "辽宁省", "group": None,
-     "eligible": lambda p: bool(p.get("digital_workshop")), "amount": lambda p: 30, "status": "active",
-     "basis": "省级数字化车间 ≤30万", "note": "[真实]"},
+     "region": "辽宁（含大连）","eligible": lambda p: bool(p.get("digital_workshop")), "amount": lambda p: 30, "status": "active",
+     "basis": "省级数字化车间 ≤30万", "note": "[真实·大连]"},
 
-    # —— 工业设计中心（互斥组：三级取高）——
+    # —— 工业设计中心（互斥组：三级取高）· 辽宁（含大连）——
     {"key": "idc_city", "name": "工业设计中心·市级", "level": "大连市", "group": "工业设计中心",
-     "eligible": lambda p: p.get("idc") == "市级", "amount": _idc_amt, "status": "none",
-     "basis": "市级工业设计中心无定额奖励", "note": "[真实]"},
+     "region": "辽宁（含大连）","eligible": lambda p: p.get("idc") == "市级", "amount": _idc_amt, "status": "none",
+     "basis": "市级工业设计中心无定额奖励", "note": "[真实·大连]"},
     {"key": "idc_prov", "name": "工业设计中心·省级", "level": "辽宁省", "group": "工业设计中心",
-     "eligible": lambda p: p.get("idc") == "省级", "amount": _idc_amt, "status": "active",
-     "basis": "省级工业设计中心 30万", "note": "[真实]"},
+     "region": "辽宁（含大连）","eligible": lambda p: p.get("idc") == "省级", "amount": _idc_amt, "status": "active",
+     "basis": "省级工业设计中心 30万", "note": "[真实·大连]"},
     {"key": "idc_natl", "name": "工业设计中心·国家级", "level": "国家级", "group": "工业设计中心",
-     "eligible": lambda p: p.get("idc") == "国家级", "amount": _idc_amt, "status": "active",
-     "basis": "国家级工业设计中心 50万", "note": "[真实]"},
+     "region": "辽宁（含大连）","eligible": lambda p: p.get("idc") == "国家级", "amount": _idc_amt, "status": "active",
+     "basis": "国家级工业设计中心 50万", "note": "[真实·大连]"},
 
-    # —— 单项冠军（独立；部分地区与小巨人互斥，需确认）——
+    # —— 单项冠军（独立；部分地区与小巨人互斥，需确认）· 辽宁（含大连）——
     {"key": "champion", "name": "制造业单项冠军", "level": "国家级/省级", "group": None,
-     "eligible": lambda p: bool(p.get("champion")), "amount": lambda p: 100, "status": "active",
-     "basis": "国家/省制造业单项冠军 不超过100万；注：部分地区与专精特新小巨人互斥申报，需确认", "note": "[真实]"},
+     "region": "辽宁（含大连）","eligible": lambda p: bool(p.get("champion")), "amount": lambda p: 100, "status": "active",
+     "basis": "国家/省制造业单项冠军 不超过100万；注：部分地区与专精特新小巨人互斥申报，需确认", "note": "[真实·大连]"},
 
-    # —— 新型技改（独立）——
+    # —— 新型技改（独立）· 辽宁（含大连）——
     {"key": "tech", "name": "大连市制造业新型技术改造专项", "level": "大连市", "group": None,
-     "eligible": lambda p: (p.get("tech_type") in ("设备更新", "新型技改")) and (p.get("tech_invest") or 0) > 0,
+     "region": "辽宁（含大连）","eligible": lambda p: (p.get("tech_type") in ("设备更新", "新型技改")) and (p.get("tech_invest") or 0) > 0,
      "amount": _tech_amt, "status": "active",
-     "basis": "设备更新按投资额10% / 新型技改按20%，单项目最高200万", "note": "[真实]"},
+     "basis": "设备更新按投资额10% / 新型技改按20%，单项目最高200万", "note": "[真实·大连]"},
 
-    # —— 高企（独立）——
+    # —— 高企（独立，全国）——
     {"key": "hightech", "name": "国家高新技术企业", "level": "国家级", "group": None,
-     "eligible": lambda p: bool(p.get("is_hightech")), "amount": _hightech_amt, "status": "active",
-     "basis": "研发投入阶梯奖励：50万→5万 / 100万→10万 / 1000万→20万；另享所得税15%优惠", "note": "[真实]"},
+     "region": "全国", "eligible": lambda p: bool(p.get("is_hightech")), "amount": _hightech_amt, "status": "active",
+     "basis": "研发投入阶梯奖励：50万→5万 / 100万→10万 / 1000万→20万；另享所得税15%优惠", "note": "[真实·全国]"},
 
-    # —— 科技型中小企业（独立，研发加计100%减税）——
+    # —— 科技型中小企业（独立，研发加计100%减税，全国）——
     {"key": "tech_sme", "name": "科技型中小企业（研发费用加计扣除）", "level": "国家级", "group": None,
-     "eligible": lambda p: bool(p.get("is_tech_sme")), "amount": lambda p: 0, "status": "active",
-     "basis": "研发费用加计扣除100%（减税，非定额）；与高企可叠加享受", "note": "[真实]"},
+     "region": "全国", "eligible": lambda p: bool(p.get("is_tech_sme")), "amount": lambda p: 0, "status": "active",
+     "basis": "研发费用加计扣除100%（减税，非定额）；与高企可叠加享受", "note": "[真实·全国]"},
 
-    # —— 先进制造业增值税加计抵减（独立）——
+    # —— 先进制造业增值税加计抵减（独立，全国）——
     {"key": "vat", "name": "先进制造业企业增值税加计抵减", "level": "国家级", "group": None,
-     "eligible": lambda p: bool(p.get("is_hightech")) and (p.get("vat_base") or 0) > 0,
+     "region": "全国", "eligible": lambda p: bool(p.get("is_hightech")) and (p.get("vat_base") or 0) > 0,
      "amount": _vat_amt, "status": "active",
-     "basis": "当期可抵扣进项税额 5%（针对高企制造业）", "note": "[真实]"},
+     "basis": "当期可抵扣进项税额 5%（针对高企制造业）", "note": "[真实·全国]"},
 
-    # —— 超长期特别国债（独立）——
+    # —— 超长期特别国债（独立，全国）——
     {"key": "bond", "name": "超长期特别国债·工业设备更新", "level": "国家级", "group": None,
-     "eligible": lambda p: (p.get("fixed_asset_invest") or 0) > 0, "amount": _bond_amt, "status": "active",
-     "basis": "固定资产投入 15%（国家级贴息类）", "note": "[真实]"},
+     "region": "全国", "eligible": lambda p: (p.get("fixed_asset_invest") or 0) > 0, "amount": _bond_amt, "status": "active",
+     "basis": "固定资产投入 15%（国家级贴息类）", "note": "[真实·全国]"},
 
-    # —— 绿色工厂（政策明文暂无补助）——
-    {"key": "green", "name": "绿色工厂", "level": "国家级/省级", "group": None,
-     "eligible": lambda p: bool(p.get("green_factory")), "amount": lambda p: 0, "status": "none",
-     "basis": "30条明文：绿色工厂暂无市级奖补（国家级绿色制造另有配套，以最新通知为准）", "note": "[暂无]"},
+    # —— 绿色工厂（辽宁：30条明文暂无市级奖补）——
+    {"key": "green", "name": "绿色工厂（辽宁）", "level": "国家级/省级", "group": None,
+     "region": "辽宁（含大连）","eligible": lambda p: bool(p.get("green_factory")), "amount": lambda p: 0, "status": "none",
+     "basis": "大连惠企30条明文：绿色工厂暂无市级奖补（国家级绿色制造另有配套，以最新通知为准）", "note": "[暂无]"},
 
-    # —— 首台套（待补，30条未含）——
-    {"key": "first_set", "name": "首台(套)重大技术装备保险补偿", "level": "国家级", "group": None,
-     "eligible": lambda p: bool(p.get("first_set")), "amount": lambda p: None, "status": "pending",
-     "basis": "国家工信部+财政部政策，30条未含，待接入补偿比例/封顶数据", "note": "[待补]"},
+    # —— 首台(套)重大技术装备（东北/全国，已接入真实口径）——
+    {"key": "first_set", "name": "首台(套)重大技术装备奖补", "level": "国家级/省级", "group": None,
+     "region": "东北", "eligible": lambda p: bool(p.get("first_set")), "amount": _first_set_amt, "status": "active",
+     "basis": "黑龙江按产品实际成交价50%奖励(单台≤200万/户年≤500万)；辽宁按保费补贴办法补贴保费；"
+              "黑龙江对'综合险'按投保费率(≤3%)的80%补偿(≤500万/年,最长3年)。填'首台套成交价'可测奖励额",
+     "note": "[真实·东北]"},
 
-    # —— 东北振兴金融工具（待补，30条未含）——
-    {"key": "revival_fin", "name": "东北振兴政策性贷款/贴息", "level": "国家级", "group": None,
-     "eligible": lambda p: (p.get("loan_amount") or 0) > 0, "amount": lambda p: None, "status": "pending",
-     "basis": "国开行/进出口银行政策性贷款、专项再贷款贴息，30条未含，待接入利率/贴息口径", "note": "[待补]"},
+    # —— 东北振兴金融工具 / 设备更新贷款贴息（东北/全国，已接入真实口径）——
+    {"key": "revival_fin", "name": "设备更新贷款财政贴息（东北振兴金融工具）", "level": "国家级/省级", "group": None,
+     "region": "东北", "eligible": lambda p: (p.get("loan_amount") or 0) > 0, "amount": _revival_amt, "status": "active",
+     "basis": "中央财政设备更新贷款贴息1.5个百分点、贴息≤2年(财金〔2026〕2号)；辽宁贷款贴息≤同期LPR、单项上限1000万；"
+              "黑龙江技改贴息按LPR给12/24个月、最高800万/2500万。按国家1.5%年度口径测算",
+     "note": "[真实·东北]"},
+
+    # ===================== 东北区域省级奖补（新增） =====================
+    # —— 黑龙江：智能工厂 / 数字化车间（按合同金额10%）——
+    {"key": "hl_digital_factory", "name": "黑龙江·智能工厂（省级认定）", "level": "黑龙江省", "group": None,
+     "region": "黑龙江", "eligible": lambda p: (p.get("hl_digi_invest") or 0) > 0 and bool(p.get("digital_factory_hl")),
+     "amount": _hl_digi_factory_amt, "status": "active",
+     "basis": "经省级认定的智能工厂，按项目合同金额(含设备+工业软件)10%一次性补助，最高1000万", "note": "[真实·东北]"},
+    {"key": "hl_digital_ws", "name": "黑龙江·数字化车间（省级认定）", "level": "黑龙江省", "group": None,
+     "region": "黑龙江", "eligible": lambda p: (p.get("hl_digi_invest") or 0) > 0 and bool(p.get("digital_workshop_hl")),
+     "amount": _hl_digi_ws_amt, "status": "active",
+     "basis": "经省级认定的数字化车间(生产线)，按合同金额10%一次性补助，最高200万", "note": "[真实·东北]"},
+
+    # —— 黑龙江：国家级绿色工厂 100万（与辽宁[暂无]分属不同资金池）——
+    {"key": "hl_green", "name": "黑龙江·国家级绿色工厂", "level": "黑龙江省", "group": None,
+     "region": "黑龙江", "eligible": lambda p: bool(p.get("green_factory")), "amount": lambda p: 100, "status": "active",
+     "basis": "上一年度被评为国家级绿色工厂，一次性奖励100万（黑政办规〔2022〕8号）", "note": "[真实·东北]"},
+
+    # —— 黑龙江：国家级专精特新小巨人 100万（与大连市级50万分属省/市资金池，可叠加）——
+    {"key": "hl_giant", "name": "黑龙江·专精特新小巨人（省级奖励）", "level": "黑龙江省", "group": None,
+     "region": "黑龙江", "eligible": lambda p: p.get("cert") == "专精特新小巨人", "amount": lambda p: 100, "status": "active",
+     "basis": "国家级专精特新'小巨人'一次性奖励100万；与大连市级50万分属省/市不同资金池，可叠加", "note": "[真实·东北]"},
+
+    # —— 黑龙江：省级制造业隐形冠军 50万 ——
+    {"key": "hl_hidden_champion", "name": "黑龙江·省级制造业隐形冠军", "level": "黑龙江省", "group": None,
+     "region": "黑龙江", "eligible": lambda p: bool(p.get("hidden_champion")), "amount": lambda p: 50, "status": "active",
+     "basis": "认定为省级制造业'隐形冠军'企业，一次性奖励50万", "note": "[真实·东北]"},
+
+    # —— 黑龙江：工业设计中心（并入'工业设计中心'互斥组，取高）——
+    {"key": "hl_idc_prov", "name": "黑龙江·工业设计中心·省级", "level": "黑龙江省", "group": "工业设计中心",
+     "region": "黑龙江", "eligible": lambda p: p.get("idc") == "省级", "amount": lambda p: 100, "status": "active",
+     "basis": "省级工业设计中心一次性奖励100万（与辽宁省级30万同组取高）", "note": "[真实·东北]"},
+    {"key": "hl_idc_natl", "name": "黑龙江·工业设计中心·国家级", "level": "黑龙江省", "group": "工业设计中心",
+     "region": "黑龙江", "eligible": lambda p: p.get("idc") == "国家级", "amount": lambda p: 200, "status": "active",
+     "basis": "国家级工业设计中心一次性奖励200万（与辽宁国家级50万同组取高）", "note": "[真实·东北]"},
+
+    # —— 吉林：知识产权质押融资贴息 2%（≤20万/年）——
+    {"key": "jl_ip_pledge", "name": "吉林·知识产权质押融资贴息", "level": "吉林省", "group": None,
+     "region": "吉林", "eligible": lambda p: (p.get("pledge_amount") or 0) > 0, "amount": _jl_pledge_amt, "status": "active",
+     "basis": "知识产权质押融资金额贴息2%，每户年度最高20万；另评估费50%(≤2万)、保险费担保费50%(≤5万)", "note": "[真实·东北]"},
 ]
 
 
@@ -182,27 +271,40 @@ def _safe_amount(pol, profile):
         return None
 
 
+def _region_ok(pol, selected_regions):
+    r = pol.get("region", "辽宁")
+    if r in ("全国", "东北"):
+        return True
+    return r in selected_regions
+
+
 def _upgrade_suggestions(profile):
     sug = []
     if profile.get("level") in ("基础级", "先进级"):
         nxt = {"基础级": ("先进级", 100), "先进级": ("卓越级", 200)}[profile["level"]]
         sug.append(f"若将申报等级由「{profile['level']}」提升至「{nxt[0]}」，梯度培育奖励可增至约 {nxt[1]} 万元。")
     if profile.get("cert") == "专精特新中小企业":
-        sug.append("若进一步认定为专精特新'小巨人'，可多拿约 20 万元（50-30）。")
+        sug.append("若进一步认定为专精特新'小巨人'，可多拿约 20 万元（50-30，大连）；若在黑龙江另享省级100万奖励。")
     if profile.get("cert") == "创新型中小企业":
         sug.append("若升级为省级专精特新/小巨人，专精特新奖励可再增 30~50 万元。")
     if profile.get("idc") in ("市级", "省级"):
         nxt = {"市级": ("省级", 30), "省级": ("国家级", 50)}[profile["idc"]]
-        sug.append(f"工业设计中心由「{profile['idc']}」升级至「{nxt[0]}」，可多拿约 {nxt[1]} 万元。")
+        sug.append(f"工业设计中心由「{profile['idc']}」升级至「{nxt[0]}」，可多拿约 {nxt[1]} 万元（辽宁）。")
     if not profile.get("champion"):
         sug.append("若产品市场份额居细分行业前列，可同步申报制造业单项冠军（≤100万），与梯度培育不冲突。")
+    if profile.get("region") and "黑龙江" in profile["region"] and not profile.get("hidden_champion"):
+        sug.append("黑龙江企业对标省级制造业'隐形冠军'（50万），与单项冠军可分别申报。")
     return sug
 
 
 def recommend_policy_package(profile: dict) -> dict:
     """横向拉通多政策 + 最优不冲突求解，输出结构化结论（离线版）。"""
     from collections import defaultdict
-    eligible = [p for p in POLICIES if _safe_call(p["eligible"], profile)]
+    selected_regions = profile.get("region") or ["辽宁（含大连）"]
+    if isinstance(selected_regions, str):
+        selected_regions = [selected_regions]
+
+    eligible = [p for p in POLICIES if _safe_call(p["eligible"], profile) and _region_ok(p, selected_regions)]
     if not eligible:
         return {"matched": [], "pending": [], "excluded": [], "upgrades": [],
                 "total_wan": 0, "text": "当前画像暂不满足已接入政策的硬性条件，建议先补齐资质（见资源库·政策文件库）。"}
@@ -249,8 +351,8 @@ def recommend_policy_package(profile: dict) -> dict:
     if matched:
         parts.append(f"您满足{names}共{len(matched)}项可获资金政策")
     if pending:
-        parts.append(f"另有{len(pending)}项待补政策（首台套/东北振兴金融工具等，数据接入后自动测算）")
-    text = "；".join(parts) + (f"。当前可测算总额约 {round(total, 1)} 万元（取高、不冲突；封顶以大连最新申报指南为准）。"
+        parts.append(f"另有{len(pending)}项需补充字段或待核定政策（首台套/东北振兴金融工具等）")
+    text = "；".join(parts) + (f"。当前可测算总额约 {round(total, 1)} 万元（取高、不冲突；封顶以各省最新申报指南为准）。"
                               if matched else "。")
 
     return {"matched": matched, "pending": pending, "excluded": excluded,
@@ -271,7 +373,7 @@ def recommend_policy_package_llm(profile: dict) -> dict:
         return base
     lines = "\n".join(f"- {m['policy']}（{m['level']}）：约 {m['amount_wan']} 万元 — {m['basis']}"
                       for m in base["matched"])
-    prompt = (f"你是大连智能制造产业协会的AI顾问。企业画像：{profile}。\n"
+    prompt = (f"你是东北区域智能制造产业协会的AI顾问。企业画像：{profile}。\n"
               f"已匹配政策与测算：\n{lines}\n"
               f"请用一段正式、鼓励企业'同步申报、应报尽报、取高不冲突'的话术复述上述结论，"
               f"并提示资金含封顶值、以当年政策为准。不要编造额外政策。")
@@ -292,15 +394,18 @@ if __name__ == "__main__":
         "idc": "省级", "champion": True, "digital_workshop": True,
         "first_set": True, "green_factory": False, "fixed_asset_invest": 1000,
         "vat_base": 100, "loan_amount": 8000,
+        "region": ["辽宁（含大连）", "黑龙江", "吉林"],
+        "hl_digi_invest": 3000, "digital_factory_hl": True, "digital_workshop_hl": False,
+        "hidden_champion": True, "first_set_price": 400, "pledge_amount": 500,
     }
     rec = recommend_policy_package(profile)
-    print("=== 政策包求解结果 ===")
+    print("=== 政策包求解结果（东北区域） ===")
     print(rec["text"])
     print("\n[已选·取高不冲突]")
     for m in rec["matched"]:
         print(f"  - {m['policy']}：{m['amount_wan']} 万  ({m['note']} {m['basis']})")
     print(f"\n[可测算总额] {rec['total_wan']} 万元")
-    print("\n[待补政策]")
+    print("\n[需补字段/待核定]")
     for p in rec["pending"]:
         print(f"  - {p['policy']}：{p['basis']}")
     print("\n[互斥/取高说明]")
