@@ -130,4 +130,23 @@ st.markdown("#### 🏛️ 官方智能工厂申报通道")
 st.caption("完成本模块的研判与优化后，可前往工业和信息化部官方智能工厂申报系统提交正式申报。")
 st.link_button("前往官方智能工厂申报系统 ↗", "https://adminconsole.miit-imps.com/", use_container_width=True)
 
+st.divider()
+st.markdown("#### 🗺️ 东北区域省级 / 市级官方通道")
+st.caption(
+    "完成研判后，可按申报省份前往对应的省级工信 / 财政 / 发改等官方站点查询申报通知与提交入口"
+    "（以下为各站点官方政策发布 / 申报页，具体申报系统以当年通知为准）。"
+)
+ne_official_links = [
+    ("辽宁省人民政府（政策发布）", "https://www.ln.gov.cn/web/ywdt/qsgd/ass_2_1/2026061209134976887/index.shtml"),
+    ("营口市财政局（惠企政策）", "https://czj.yingkou.gov.cn/govxxgk/czj/2026-04-20/f0c1ff85-2320-4a69-8db7-1154d12cf33b.html"),
+    ("盘锦市大洼区人民政府", "https://www.dawa.gov.cn/2026_05/15_14/content-562083.html"),
+    ("吉林市人大常委会", "https://www.jlcity.gov.cn/zw/taya/rddbjyjdf/202212/t20221201_1095813.html?version=slh"),
+    ("黑龙江省工业和信息化厅", "https://gxt.hlj.gov.cn/gxt/c106958/202604/c00_31930317.shtml"),
+]
+for _name, _url in ne_official_links:
+    st.link_button(f"↗ {_name}", _url, use_container_width=True)
+st.caption("⚠️ 下方为第三方政策解读站点（非政府官方），仅供参考，请以各官方通道为准：")
+st.link_button("↗ 第三方政策解读（非官方 · gztexun.com）", "https://www.gztexun.com/article/6893.html",
+              use_container_width=True)
+
 st.info(DISCLAIMER)

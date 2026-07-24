@@ -87,6 +87,20 @@ def _bond_amt(p):
 
 
 # —— 东北区域省级奖补测算函数 ——
+def _jl_zgsz_after_amt(p):
+    # 吉林智改数转事后奖补（吉工信办联规〔2025〕59号）：软硬件投入≥100万按10%，
+    # 数字化车间≤300万 / 智能工厂≤1000万 / 未来工厂≤2000万
+    inv = p.get("jl_zgsz_invest") or 0
+    cap = {"数字化车间": 300, "智能工厂": 1000, "未来工厂": 2000}.get(p.get("jl_zgsz_type"), 1000)
+    return min(inv * 0.10, cap) if inv >= 100 else None
+
+
+def _dl_tech_central_amt(p):
+    # 大连新型技改城市试点中央奖补（大工信发〔2025〕38号）：单项目≤总投资20%，最高3000万
+    inv = p.get("dl_tech_central_invest") or 0
+    return min(inv * 0.20, 3000) if inv > 0 else None
+
+
 def _hl_digi_factory_amt(p):
     # 黑龙江：经省级认定的智能工厂，按项目合同金额10%一次性补助，最高1000万[真实·东北]
     inv = p.get("hl_digi_invest") or 0
@@ -210,10 +224,20 @@ POLICIES = [
      "basis": "大连惠企30条明文：绿色工厂暂无市级奖补（国家级绿色制造另有配套，以最新通知为准）", "note": "[暂无]"},
 
     # —— 首台(套)重大技术装备（东北/全国，已接入真实口径）——
-    {"key": "first_set", "name": "首台(套)重大技术装备奖补", "level": "国家级/省级", "group": None,
-     "region": "东北", "eligible": lambda p: bool(p.get("first_set")), "amount": _first_set_amt, "status": "active",
-     "basis": "黑龙江按产品实际成交价50%奖励(单台≤200万/户年≤500万)；辽宁按保费补贴办法补贴保费；"
-              "黑龙江对'综合险'按投保费率(≤3%)的80%补偿(≤500万/年,最长3年)。填'首台套成交价'可测奖励额",
+    {"key": "first_set", "name": "黑龙江·首台(套)产品奖励", "level": "黑龙江省", "group": None,
+     "region": "黑龙江", "eligible": lambda p: bool(p.get("first_set")), "amount": _first_set_amt, "status": "active",
+     "basis": "黑龙江对省工信厅认定的首台(套)产品，按单台(套)实际成交价50%一次性奖励，"
+              "单台≤200万、每户年合计≤500万（设备类单价≥50万）。填'首台套成交价'可测奖励额",
+     "note": "[真实·东北]"},
+    {"key": "first_set_insurance", "name": "首台(套)保险补偿·国家级保费补贴", "level": "国家级", "group": None,
+     "region": "东北", "eligible": lambda p: bool(p.get("first_set")), "amount": lambda p: None, "status": "active",
+     "basis": "国家级：对符合条件的投保企业按不超过实际缴纳保费80%给予补助，资格审定有效期5年"
+              "（工信部联通装〔2024〕89号）。辽宁、吉林执行此国家级保费补贴；黑龙江另设综合险专项（见下）",
+     "note": "[真实·东北]"},
+    {"key": "hl_fs_insurance", "name": "黑龙江·首台(套)保险补偿（综合险）", "level": "黑龙江省", "group": None,
+     "region": "黑龙江", "eligible": lambda p: bool(p.get("hl_fs_insurance")), "amount": lambda p: 50, "status": "active",
+     "basis": "黑龙江对企业购买首台(套)产品综合险，按年度保费80%补偿，费率上限3%，补偿期最长3年，"
+              "每户企业每年最高补偿50万元",
      "note": "[真实·东北]"},
 
     # —— 东北振兴金融工具 / 设备更新贷款贴息（东北/全国，已接入真实口径）——
@@ -261,6 +285,82 @@ POLICIES = [
     {"key": "jl_ip_pledge", "name": "吉林·知识产权质押融资贴息", "level": "吉林省", "group": None,
      "region": "吉林", "eligible": lambda p: (p.get("pledge_amount") or 0) > 0, "amount": _jl_pledge_amt, "status": "active",
      "basis": "知识产权质押融资金额贴息2%，每户年度最高20万；另评估费50%(≤2万)、保险费担保费50%(≤5万)", "note": "[真实·东北]"},
+
+    # ===================== 东北区域补充政策（本轮新增） =====================
+    # —— 吉林：智改数转事后奖补（吉工信办联规〔2025〕59号）——
+    {"key": "jl_zgsz_after", "name": "吉林·智改数转事后奖补", "level": "吉林省", "group": None,
+     "region": "吉林", "eligible": lambda p: (p.get("jl_zgsz_invest") or 0) >= 100, "amount": _jl_zgsz_after_amt, "status": "active",
+     "basis": "对工厂(车间)建设软硬件投入≥100万，按10%事后奖补：数字化车间(生产线)≤300万、"
+              "智能工厂≤1000万、未来工厂≤2000万（吉工信办联规〔2025〕59号）",
+     "note": "[真实·东北]"},
+
+    # —— 大连：新型技改城市试点中央奖补（大工信发〔2025〕38号）——
+    {"key": "dl_tech_central", "name": "大连·新型技改中央奖补", "level": "大连市", "group": None,
+     "region": "辽宁（含大连）", "eligible": lambda p: (p.get("dl_tech_central_invest") or 0) > 0, "amount": _dl_tech_central_amt, "status": "active",
+     "basis": "国家制造业新型技改城市试点中央专项资金：单项目支持≤项目总投资20%，最高3000万元"
+              "（大工信发〔2025〕38号）；对国家级智能工厂/链主/省级智能工厂/数字化车间另予50-200万奖励",
+     "note": "[真实·大连]"},
+
+    # —— 大连：新型技改标杆奖励（大工信发〔2025〕39号）——
+    {"key": "dl_tech_benchmark", "name": "大连·新型技改标杆奖励", "level": "大连市", "group": None,
+     "region": "辽宁（含大连）", "eligible": lambda p: bool(p.get("dl_tech_benchmark")), "amount": lambda p: 200, "status": "active",
+     "basis": "对国家级智能工厂、产业链链主企业、省级智能工厂、数字化车间等给予50-200万元奖励"
+              "（大工信发〔2025〕39号，中央奖补资金约10%按成效支持）",
+     "note": "[真实·大连]"},
+
+    # —— 大连：中小企业融资担保补助（大工信发〔2023〕134号）——
+    {"key": "dl_sme_guarantee", "name": "大连·中小企业融资担保补助", "level": "大连市", "group": None,
+     "region": "辽宁（含大连）", "eligible": lambda p: bool(p.get("dl_sme_guarantee")), "amount": lambda p: 20, "status": "active",
+     "basis": "对国家级专精特新小巨人/省级专精特新中小企业上年度按时偿还贷款的担保费给予50%补助，最高20万"
+              "（大工信发〔2023〕134号）",
+     "note": "[真实·大连]"},
+
+    # —— 大连：小升规奖励（大工信发〔2023〕134号）——
+    {"key": "dl_xiaoshenggui", "name": "大连·小升规奖励", "level": "大连市", "group": None,
+     "region": "辽宁（含大连）", "eligible": lambda p: bool(p.get("dl_xiaoshenggui")), "amount": lambda p: 10, "status": "active",
+     "basis": "对首次纳入规上的工业企业给予5万元一次性奖励（战新企业10万）；连续三年规上再奖3万"
+              "（大工信发〔2023〕134号）",
+     "note": "[真实·大连]"},
+
+    # —— 辽宁省级：低空经济贷款贴息（辽政发〔2026〕3号）——
+    {"key": "ln_lowaltitude", "name": "辽宁·低空经济贷款贴息", "level": "辽宁省", "group": None,
+     "region": "辽宁（含大连）", "eligible": lambda p: bool(p.get("ln_lowaltitude")), "amount": lambda p: 500, "status": "active",
+     "basis": "对低空经济项目按贷款本金年化1.5%贴息，单项目年最高100万、单企业年最高500万（辽政发〔2026〕3号）",
+     "note": "[真实·东北]"},
+
+    # —— 辽宁省级：算力使用补助（辽政发〔2026〕3号）——
+    {"key": "ln_compute", "name": "辽宁·算力使用补助", "level": "辽宁省", "group": None,
+     "region": "辽宁（含大连）", "eligible": lambda p: bool(p.get("ln_compute")), "amount": lambda p: 200, "status": "active",
+     "basis": "对重点行业企业等购买算力服务给予每年最高200万元资金补助（辽政发〔2026〕3号）",
+     "note": "[真实·东北]"},
+
+    # —— 辽宁省级：化工设备更新补贴（辽政发〔2026〕3号）——
+    {"key": "ln_chemical", "name": "辽宁·化工设备更新补贴", "level": "辽宁省", "group": None,
+     "region": "辽宁（含大连）", "eligible": lambda p: bool(p.get("ln_chemical")), "amount": lambda p: 1000, "status": "active",
+     "basis": "对化工行业老旧装置设备更新改造，以贷款贴息/担保费补贴/保险保费补贴等形式支持，单企业最高1000万"
+              "（辽政发〔2026〕3号）",
+     "note": "[真实·东北]"},
+
+    # —— 长春新区：技改/智改数转配套奖励 ——
+    {"key": "ccxq_tech", "name": "长春新区·技改/智改数转配套奖励", "level": "长春新区", "group": None,
+     "region": "吉林", "eligible": lambda p: bool(p.get("ccxq_tech")), "amount": lambda p: 200, "status": "active",
+     "basis": "对获国家/省市支持的技改扩能、智改数转项目，按国家、省市奖励金额的20%、10%给予配套，单企业最高200万"
+              "（长春新区推动经济持续向好若干措施）",
+     "note": "[真实·东北]"},
+
+    # —— 长春新区：首台套配套奖励 ——
+    {"key": "ccxq_fs", "name": "长春新区·首台套配套奖励", "level": "长春新区", "group": None,
+     "region": "吉林", "eligible": lambda p: bool(p.get("ccxq_fs")), "amount": lambda p: 50, "status": "active",
+     "basis": "企业产品首次纳入工信部首台(套)目录，按国家、省市奖励金额最高20%配套，最高50万"
+              "（长春新区推动经济持续向好若干措施）",
+     "note": "[真实·东北]"},
+
+    # —— 黑龙江：规上工业企业贷款贴息80%（黑工信融训联规〔2025〕15号）——
+    {"key": "hl_loan_80", "name": "黑龙江·规上工业企业贷款贴息(80%)", "level": "黑龙江省", "group": None,
+     "region": "黑龙江", "eligible": lambda p: bool(p.get("hl_loan_80")), "amount": lambda p: 1000, "status": "active",
+     "basis": "对规上工业企业贷款实付利息的80%给予贴息，单个企业年度最高1000万元"
+              "（黑工信融训联规〔2025〕15号，有效期至2026.12.31）",
+     "note": "[真实·东北]"},
 ]
 
 

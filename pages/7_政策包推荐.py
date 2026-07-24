@@ -92,6 +92,24 @@ with st.form("policy_pack_form"):
     with r4c3:
         st.caption("说明：黑龙江智能工厂/数字化车间按合同额10%补助（≤1000万/≤200万）；"
                    "黑龙江小巨人省级另奖100万（与大连50万叠加）；吉林知识产权质押贴息2%（≤20万/年）。")
+    st.write("**东北区域补充专项（辽宁/大连/吉林/黑龙江，勾选或填值即测算上限）**")
+    r5c1, r5c2, r5c3 = st.columns(3)
+    with r5c1:
+        pk_jl_zgsz_invest = st.number_input("吉林·智改数转软硬件投资额（万元）", min_value=0, value=0, step=100, key="pk_jl_zgsz")
+        pk_jl_zgsz_type = st.selectbox("吉林·智改数转类型", ["数字化车间", "智能工厂", "未来工厂"], key="pk_jl_zgsz_type")
+        pk_dl_central = st.number_input("大连·新型技改中央奖补投资额（万元）", min_value=0, value=0, step=100, key="pk_dl_central")
+    with r5c2:
+        pk_dl_bench = st.checkbox("大连·新型技改标杆奖励(50-200万)", key="pk_dl_bench")
+        pk_dl_guarantee = st.checkbox("大连·中小企业融资担保补助(≤20万)", key="pk_dl_gua")
+        pk_dl_xsg = st.checkbox("大连·小升规奖励(5-10万)", key="pk_dl_xsg")
+        pk_ln_low = st.checkbox("辽宁·低空经济贷款贴息(单企业年≤500万)", key="pk_ln_low")
+    with r5c3:
+        pk_ln_compute = st.checkbox("辽宁·算力使用补助(≤200万/年)", key="pk_ln_compute")
+        pk_ln_chem = st.checkbox("辽宁·化工设备更新补贴(≤1000万)", key="pk_ln_chem")
+        pk_ccxq_tech = st.checkbox("长春新区·技改/智改数转配套(≤200万)", key="pk_ccxq_tech")
+        pk_ccxq_fs = st.checkbox("长春新区·首台套配套(≤50万)", key="pk_ccxq_fs")
+        pk_hl_loan80 = st.checkbox("黑龙江·规上工业企业贷款贴息80%(≤1000万/年)", key="pk_hl_loan80")
+        pk_hl_fs_ins = st.checkbox("黑龙江·首台套保险补偿(综合险≤50万/年)", key="pk_hl_fs_ins")
     submit_pk = st.form_submit_button("生成政策包推荐", use_container_width=True, type="primary")
 
 if submit_pk:
@@ -107,6 +125,13 @@ if submit_pk:
         "hl_digi_invest": pk_hl_digi, "digital_factory_hl": pk_hl_factory,
         "digital_workshop_hl": pk_hl_ws, "hidden_champion": pk_hidden,
         "first_set_price": pk_fs_price, "pledge_amount": pk_pledge,
+        "jl_zgsz_invest": pk_jl_zgsz_invest, "jl_zgsz_type": pk_jl_zgsz_type,
+        "dl_tech_central_invest": pk_dl_central,
+        "dl_tech_benchmark": pk_dl_bench, "dl_sme_guarantee": pk_dl_guarantee,
+        "dl_xiaoshenggui": pk_dl_xsg, "ln_lowaltitude": pk_ln_low,
+        "ln_compute": pk_ln_compute, "ln_chemical": pk_ln_chem,
+        "ccxq_tech": pk_ccxq_tech, "ccxq_fs": pk_ccxq_fs,
+        "hl_loan_80": pk_hl_loan80, "hl_fs_insurance": pk_hl_fs_ins,
     }
     rec = recommend_policy_package_llm(profile) if is_configured() else recommend_policy_package(profile)
 
