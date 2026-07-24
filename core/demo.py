@@ -906,3 +906,5 @@ AUX_DEMO_INPUTS = {
     "F7 评审模拟": "我司已完成MES和ERP部署，设备联网率达82%，生产效率提升25%，良品率提升12%，计划申报先进级。",
     "F8 知识问答": "智能工厂有几个等级？能不能直接报先进级？",
 }
+
+# deploy-marker: v2 force Streamlit redeploy 2026-07-24 (A/B/C 脱敏确认)
