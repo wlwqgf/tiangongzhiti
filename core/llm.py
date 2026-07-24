@@ -65,6 +65,22 @@ def call_llm(
     调用大模型，返回文本。任何异常都会转成可读的错误提示文本返回，
     保证 Streamlit 页面不会因接口问题而整体崩溃。
     """
+    # —— 改动3：双端合规拦截（集中入口，所有页面共享，无需逐页加护栏）——
+    # 企业端命中「评分权重/打分细则/刷分」等禁用词 → 直接拒答并引导切专家端；
+    # 专家端全部放行。session_state 缺失时按企业端处理（合规优先）。
+    try:
+        import streamlit as st
+        _auth = st.session_state.get("auth_role", "enterprise")
+        _agent_mode = "专家端" if _auth == "expert" else "企业端"
+    except Exception:
+        _agent_mode = "企业端"
+    try:
+        from core.agent_mode import route_query
+        _routed = route_query(_agent_mode, user_content)
+        if not _routed["allowed"]:
+            return _routed["prompt_hint"]
+    except Exception:
+        pass
     if not is_configured():
         return (
             "⚠️ 尚未配置模型接口。请在 `.env` 中填写 `OPENAI_API_KEY` 与 "

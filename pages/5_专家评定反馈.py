@@ -29,6 +29,9 @@ from core.llm import call_llm, is_configured, DISCLAIMER
 from core import e_prompts as E
 from core.theme import apply_theme, render_expert_sidebar
 
+# 登录身份锚定（专家端智能体），与 app.py 登录态协同
+st.session_state.setdefault("auth_role", "expert")
+
 st.set_page_config(page_title="⑤专家侧评定与反馈", layout="wide")
 apply_theme()
 st.markdown("<h1 style='font-size:1.55rem'>🧑‍⚖️ ⑤ 专家侧评定与反馈</h1>", unsafe_allow_html=True)
@@ -422,7 +425,7 @@ SAMPLES = {
 }
 
 def _load_and_run(label, info):
-    """载入案例并离线跑通三模块（初筛→��强→评分），结果存入 session_state（零 Key 可跑）。
+    """载入案例并离线跑通三模块（初筛→增强→评分），结果存入 session_state（零 Key 可跑）。
     注意：仅预计算并缓存数据，不自动展示——用户需分别点击各模块的「运行」按钮才会渲染结果。"""
     text = open(info["path"], encoding="utf-8").read()
     st.session_state["doc_text"] = text

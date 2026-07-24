@@ -79,7 +79,7 @@ def resp_grade_match(info):
     lines.append(f"根据营收 **{rev} 万元**，初步对标：**{fit}**。")
     lines.append("\n> 注意：营收只是维度之一。最终等级还需满足数控化率、联网率、成熟度、研发占比等硬性指标"
                  "（见「指标查询」），且须**逐级申报、不可跳级**。")
-    lines.append("\n建议：先完成「①企业画像与等级推荐」获取六维度评分与冲稳保概率。")
+    lines.append("\n建议：先完成「①自评材料清单」获取六维度评分与冲稳保概率。")
     return "\n".join(lines)
 
 
@@ -98,7 +98,7 @@ def resp_index_query():
         suffix = "%" if "率" in label else ""
         cells = " | ".join(str(LEVEL_THRESHOLDS[lv][key]) + suffix for lv in ["基础级", "先进级", "卓越级", "领航级"])
         lines.append(f"| {label} | {cells} |")
-    lines.append("\n> 来源：《智能工厂梯度培育要素条件（2025年版）》。完整条款请在「①画像」与「④研判」中对照。")
+    lines.append("\n> 来源：《智能工厂梯度培育要素条件（2025年版）》。完整条款请在「①自评材料清单」与「④研判」中对照。")
     return "\n".join(lines)
 
 
