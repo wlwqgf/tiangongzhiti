@@ -125,4 +125,9 @@ st.markdown("#### 📞 需要更深入的线下服务？")
 st.caption("若研判报告无法完全满足您的需求（如现场诊断、申报书代写、深度改造规划），可提交需求工单，协会线下专家将一对一对接。")
 st.page_link("pages/6_线下服务对接.py", label="提交智能需求工单 →", icon="📞", use_container_width=True)
 
+st.divider()
+st.markdown("#### 🏛️ 官方智能工厂申报通道")
+st.caption("完成本模块的研判与优化后，可前往工业和信息化部官方智能工厂申报系统提交正式申报。")
+st.link_button("前往官方智能工厂申报系统 ↗", "https://adminconsole.miit-imps.com/", use_container_width=True)
+
 st.info(DISCLAIMER)
